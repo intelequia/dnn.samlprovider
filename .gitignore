@@ -1,0 +1,52 @@
+/src/.vs
+/src/bin
+/src/packages
+/src/DotNetNuke.Authentication.SAML/obj
+/src/DotNetNuke.Authentication.SAML/install
+/src/DotNetNuke.Authentication.SAML/*.user
+/src/Releases
+/src/DotNetNuke.Authentication.SAML/.vs
+/src/DotNetNuke.Authentication.SAML.sln.DotSettings.user
+*.user
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+[Xx]64/
+[Xx]86/
+[Bb]uild/
+bld/
+[Bb]in/
+[Oo]bj/
+[Dd]ist/
+
+#Ignore Install folder
+[Ii]nstall/
+
+#Ignore build files and folders
+[Rr]esources[Zz]ip/
+[Ii]nstall[Pp]ackage/
+
+#Ignore css map file
+*.css.map
+
+# Others
+ClientBin/
+[Ss]tyle[Cc]op.*
+~$*
+*~
+*.dbmdl
+*.dbproj.schemaview
+*.pfx
+*.publishsettings
+node_modules/
+orleans.codegen.cs
+/.vs
