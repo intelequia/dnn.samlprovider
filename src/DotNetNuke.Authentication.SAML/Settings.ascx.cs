@@ -1,17 +1,11 @@
-#region Usings
-
-using System;
-
+using DotNetNuke.Common.Utilities;
+using DotNetNuke.Entities.Portals;
+using DotNetNuke.Entities.Profile;
 using DotNetNuke.Services.Authentication;
 using DotNetNuke.Services.Exceptions;
-using DotNetNuke.Entities.Portals;
-using DotNetNuke.Common.Utilities;
-using DotNetNuke.Entities.Profile;
+using System;
 using System.Data;
-using System.Collections.Generic;
 using System.Web.UI.WebControls;
-
-#endregion
 
 namespace DotNetNuke.Authentication.SAML
 {
@@ -25,12 +19,13 @@ namespace DotNetNuke.Authentication.SAML
                 var config = SAMLAuthenticationConfig.GetConfig(PortalId);
                 config.PortalID = PortalId;
                 config.ConsumerServURL = txtConsumerServUrl.Text;
-                config.DNNAuthName = txtDNNAuthName.Text;
                 config.Enabled = chkEnabled.Checked;
                 config.IdPLogoutURL = txtIdpLogoutUrl.Text;
                 config.IdPURL = txtIdpUrl.Text;
                 config.OurIssuerEntityID = txtOurIssuerEntityId.Text;
                 config.TheirCert = txtTheirCert.Text;
+                config.OurCert = txtOurCert.Text;
+                config.OurCertKey = txtOurCertKey.Text;
                 config.usrDisplayName = txtDisplayName.Text;
                 config.usrEmail = txtEmail.Text;
                 config.usrFirstName = txtFirstName.Text;
@@ -74,10 +69,11 @@ namespace DotNetNuke.Authentication.SAML
                     txtDisplayName.Text = config.usrDisplayName;
                     txtEmail.Text = config.usrEmail;
                     txtFirstName.Text = config.usrFirstName;
-                    txtDNNAuthName.Text = config.DNNAuthName;
                     txtLastName.Text = config.usrLastName;
                     txtOurIssuerEntityId.Text = config.OurIssuerEntityID;
                     txtTheirCert.Text = config.TheirCert;
+                    txtOurCert.Text = config.OurCert;
+                    txtOurCertKey.Text = config.OurCertKey;
                     chkEnabled.Checked = config.Enabled;
                     txtRoleAttributeName.Text = config.RoleAttribute;
                     txtRequiredRolesTextbox.Text = config.RequiredRoles;
@@ -102,16 +98,15 @@ namespace DotNetNuke.Authentication.SAML
             var props = ProfileController.GetPropertyDefinitionsByPortal(PortalId);
             foreach (ProfilePropertyDefinition def in props)
             {
-                //Skip First Name or Last Name
-                if (def.PropertyName == "FirstName" || def.PropertyName == "LastName")
+                if (def.PropertyName == "FirstName" || def.PropertyName == "LastName" || def.PropertyName == "IdentitySource")
                 {
                     continue;
                 }
 
                 var setting = Null.NullString;
                 var row = ds.Tables[0].NewRow();
-                row[0] = def.PropertyName + ":";
-                if (PortalController.Instance.GetPortalSettings(PortalId).TryGetValue(SAMLAuthenticationConfig.PREFIX + SAMLAuthenticationConfig.usrPREFIX + def.PropertyName + ":", out setting))
+                row[0] = def.PropertyName;
+                if (PortalController.Instance.GetPortalSettings(PortalId).TryGetValue(SAMLAuthenticationConfig.PREFIX + SAMLAuthenticationConfig.usrPREFIX + def.PropertyName, out setting))
                 {
                     row[1] = setting;
                 }
@@ -120,13 +115,10 @@ namespace DotNetNuke.Authentication.SAML
                     row[1] = "";
                 }
                 ds.Tables[0].Rows.Add(row);
-
-
             }
 
             repeaterProps.DataSource = ds;
             repeaterProps.DataBind();
-
         }
     }
 }

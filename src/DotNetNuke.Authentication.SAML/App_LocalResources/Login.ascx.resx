@@ -112,36 +112,12 @@
     <value>2.0</value>
   </resheader>
   <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="cmdLogin.Text" xml:space="preserve">
-    <value>Login</value>
-  </data>
   <data name="Title.Text" xml:space="preserve">
-    <value>Standard</value>
-  </data>
-  <data name="InvalidVerificationCode.Text" xml:space="preserve">
-    <value>Invalid verification code</value>
-  </data>
-  <data name="UserAlreadyVerified.Text" xml:space="preserve">
-    <value>User already verified</value>
-  </data>
-  <data name="UserDoesNotExist.Text" xml:space="preserve">
-    <value>User does not exist</value>
-  </data>
-  <data name="Email.Text" xml:space="preserve">
-    <value>Email Address:</value>
-  </data>
-  <data name="cmdPassword.Text" xml:space="preserve">
-    <value>Reset Password</value>
-  </data>
-  <data name="cmdRegister.Text" xml:space="preserve">
-    <value>Register</value>
-  </data>
-  <data name="Remember.Text" xml:space="preserve">
-    <value>Remember Login</value>
+    <value>SAML</value>
   </data>
 </root>

@@ -34,3 +34,13 @@ https://github.com/intelequia/dnn.samlprovider
 
 DNN 9.3.2 and later supported
 
+# Generating a self-signed certificate with OpenSSL
+```
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+```
+
+This other version generates a 10 years certificate and does not prompt for any information
+```
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -sha256 -days 3650 -nodes -subj "/C=XX/ST=StateName/L=CityName/O=CompanyName/OU=CompanySectionName/CN=CommonNameOrHostname"
+```
+

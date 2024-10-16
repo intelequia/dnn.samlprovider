@@ -1,65 +1,72 @@
-﻿using System;
+﻿using DotNetNuke.Entities.Users;
+using DotNetNuke.Instrumentation;
 using DotNetNuke.Services.Authentication;
-using DotNetNuke.Services.Log.EventLog;
+using DotNetNuke.UI.Skins.Controls;
+using System;
+using System.Security.Cryptography.X509Certificates;
 using System.Xml;
 
 namespace DotNetNuke.Authentication.SAML
 {
     public partial class Logoff : AuthenticationLogoffBase
     {
-        private static SAMLAuthenticationConfig config;
-        private readonly IEventLogController eventLog = new EventLogController();
-        public void LogToEventLog(string methodName, string message)
-        {
-            eventLog.AddLog("DNN.Authentication.SAML." + methodName + " : " + DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss:fff"), message, PortalSettings, -1, EventLogController.EventLogType.ADMIN_ALERT);
-        }
+        private static readonly ILog Logger = LoggerSource.Instance.GetLogger(typeof(Logoff));
 
-
-        protected override void OnLoad(EventArgs e)
+        protected override void OnInit(EventArgs e)
         {
-            //LogToEventLog("Logoff.OnLoad()", "enter");
-            base.OnLoad(e);
             try
             {
-                //LogToEventLog("DNN.Authentication.SAML.Logoff.OnLoad(post)", string.Format("(Request.HttpMethod: {0}, Session[sessionIndexFromSAMLResponse]: {1}", Request.HttpMethod, Session["sessionIndexFromSAMLResponse"]));
-
-                //config = DNNAuthenticationSAMLAuthenticationConfig.GetConfig(PortalId);
-                //UserInfo user = UserController.GetCurrentUserInfo();
-                //LogToEventLog("Logoff.OnLoad()", string.Format("Logging off from saml {0}", user == null ? "null" : user.Username));
-                //X509Certificate2 cert = StaticHelper.GetCert(config.OurCertFriendlyName);
-
-
-                //XmlDocument request = GenerateSAMLLogoffRequest(user.Username);
-                //request = StaticHelper.SignSAMLRequest2(request, cert);
-                //string convertedRequestXML = StaticHelper.Base64CompressUrlEncode(request.OuterXml);
-                //string convertedSigAlg = HttpUtility.UrlEncode("http://www.w3.org/2000/09/xmldsig#rsa-sha1");
-                //byte[] signature = StaticHelper.SignString2(string.Format("SAMLRequest={0}&RelayState={1}&SigAlg={2}", convertedRequestXML, "NA", convertedSigAlg), cert);
-                //string convertedSignature = HttpUtility.UrlEncode(Convert.ToBase64String(signature)); 
-                //string redirectTo = config.IdPLogoutURL +
-                //    "?SAMLRequest=" + convertedRequestXML +
-                //    "&RelayState=NA" + 
-                //    "&SigAlg=" + convertedSigAlg +
-                //    "&Signature=" + convertedSignature
-                //;
-                config = SAMLAuthenticationConfig.GetConfig(PortalId);
+                string correlationId = Guid.NewGuid().ToString();
+                base.OnInit(e);
+                var userInfo = UserController.Instance.GetCurrentUserInfo();
+                if (userInfo == null)
+                {
+                    return;                    
+                }
                 base.OnLogOff(e);
-                Response.Redirect(config.IdPLogoutURL);
-            }
-            catch (System.Threading.ThreadAbortException tae)
-            {
-                LogToEventLog("DNN.Authentication.SAML.Logoff.OnLoad(tae)", "ThreadAbortException");
-                //Response.Redirect(Page.ResolveUrl(redirectTo), false);
+                this.AuthenticationType = "SAML";
+                Logger.Trace($"Logoff.OnInit(): Logging off from saml '{userInfo.Username}'. CorrelationId={correlationId}");
+
+                SAMLAuthenticationConfig config = SAMLAuthenticationConfig.GetConfig(PortalId);
+
+                XmlDocument request = GenerateSAMLLogoffRequest(userInfo.Username, config);
+                string convertedRequestXML = StaticHelper.Base64CompressUrlEncode(request.OuterXml);
+
+                string convertedSigAlg = "";
+                string convertedSignature = "";
+                if (!string.IsNullOrEmpty(config.OurCert) && !string.IsNullOrEmpty(config.OurCertKey))
+                {
+                    Logger.Trace($"CorrelationId={correlationId}. Signing SAML request with our certificate");
+                    X509Certificate2 cert = StaticHelper.LoadCertificateFromPEM(config.OurCert, config.OurCertKey);
+                    Logger.Trace($"CorrelationId={correlationId}. Certificate loaded successfully, Serial Number:{cert.SerialNumber}");
+
+                    request = StaticHelper.SignSAMLRequest2(request, cert);
+                    convertedSigAlg = System.Web.HttpUtility.UrlEncode("http://www.w3.org/2000/09/xmldsig#rsa-sha1");
+                    byte[] signature = StaticHelper.SignString2(string.Format("SAMLRequest={0}&RelayState={1}&SigAlg={2}", convertedRequestXML, "NA", convertedSigAlg), cert);
+                    convertedSignature = System.Web.HttpUtility.UrlEncode(Convert.ToBase64String(signature));
+                }
+                string redirectTo = config.IdPLogoutURL +
+                    "?SAMLRequest=" + convertedRequestXML +
+                    "&RelayState=NA";
+                if (!string.IsNullOrEmpty(convertedSigAlg))
+                {
+                    redirectTo += "&SigAlg=" + convertedSigAlg;
+                }
+                if (!string.IsNullOrEmpty(convertedSignature))
+                {
+                    redirectTo += "&Signature=" + convertedSignature;
+                }
+                Response.Redirect(redirectTo, false);
             }
             catch (Exception ex)
             {
-                LogToEventLog("DNN.Authentication.SAML.Logoff.OnLoad()", string.Format("Exception  {0}", ex.Message));
+                Logger.Error(ex);
+                UI.Skins.Skin.AddModuleMessage(this, $"Error logging out.", ModuleMessage.ModuleMessageType.RedError);
             }
 
-        }
+        }        
 
-        
-
-        private XmlDocument GenerateSAMLLogoffRequest(string userName)
+        private XmlDocument GenerateSAMLLogoffRequest(string userName, SAMLAuthenticationConfig config)
         {
             DateTime now = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
             string authnRequestID = "_" + Guid.NewGuid().ToString().Replace("-", "");
@@ -72,12 +79,11 @@ namespace DotNetNuke.Authentication.SAML
                 @" Destination=""" + config.IdPLogoutURL + @""" >" +
                 @" <saml:Issuer xmlns:saml=""urn:oasis:names:tc:SAML:2.0:assertion"">" + config.OurIssuerEntityID + @"</saml:Issuer>" +
                 @" <saml:NameID Format=""urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"">" + userName + @"</saml:NameID>" +
-                @" <samlp:SessionIndex>" + Session["sessionIndexFromSAMLResponse"] + "</samlp:SessionIndex>" +
+                //@" <samlp:SessionIndex>" + Session["sessionIndexFromSAMLResponse"] + "</samlp:SessionIndex>" +
                 @" </samlp:LogoutRequest>
           ";
 
             XmlDocument xml = new XmlDocument();
-            //xml.PreserveWhitespace = false;
             xml.LoadXml(requestXML);
             return xml;
         }

@@ -3,7 +3,7 @@
     <package name="SAMLProvider" type="Auth_System" version="01.00.00">
       <friendlyName>DNN SAML Provider</friendlyName>
       <description>SAML authentication provider for DNN Platform</description>
-		<iconFile>~/DesktopModules/AuthenticationServices/SAML/images/SAML.png</iconFile>
+		<iconFile>~/DesktopModules/AuthenticationServices/SAML/images/saml-logo-32.png</iconFile>
 		<owner>
 			<name>Intelequia</name>
 			<organization>Intelequia</organization>

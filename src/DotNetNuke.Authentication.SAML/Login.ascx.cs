@@ -1,54 +1,49 @@
-#region Usings
-
-using System;
-using System.Web;
-using DotNetNuke.Data;
-using DotNetNuke.Entities.Users;        //for UserController
-using DotNetNuke.Entities.Profile;
-using DotNetNuke.Instrumentation;       //for logger
-using DotNetNuke.Services.Log.EventLog; //for eventlog
-using DotNetNuke.Services.Authentication;   //for AuthenticationLoginBase
-using DotNetNuke.Security.Membership;   //for UserLoginStatus
 using DotNetNuke.Authentication.SAML.Extensions;
-
-
-using System.Xml;
-using System.Text;
+using DotNetNuke.Common;
+using DotNetNuke.Common.Lists;
+using DotNetNuke.Common.Utilities;
+using DotNetNuke.Data;
+using DotNetNuke.Entities.Host;
+using DotNetNuke.Entities.Portals;
+using DotNetNuke.Entities.Profile;
+using DotNetNuke.Entities.Users;        
+using DotNetNuke.Instrumentation;
+using DotNetNuke.Security;
+using DotNetNuke.Security.Membership;   
+using DotNetNuke.Security.Roles;
+using DotNetNuke.Services.Authentication;
+using DotNetNuke.Services.Localization;
+using DotNetNuke.Services.Log.EventLog;
+using DotNetNuke.Services.UserRequest;
+using DotNetNuke.UI.Skins.Controls;
+using DotNetNuke.UI.UserControls;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using DotNetNuke.Common.Utilities;
-using DotNetNuke.Security.Roles;
-
-
-#endregion
+using System.Net.Sockets;
+using System.Text;
+using System.Web;
+using System.Web.Security;
+using System.Xml;
+using System.Security.Cryptography.X509Certificates;
 
 namespace DotNetNuke.Authentication.SAML
 {
-
-	public partial class Login : AuthenticationLoginBase
+    public partial class Login : AuthenticationLoginBase
     {
 		private static readonly ILog Logger = LoggerSource.Instance.GetLogger(typeof (Login));
-        private static readonly IEventLogController eventLog = new EventLogController();
-        private static DotNetNuke.Entities.Portals.PortalSettings staticPortalSettings;
-        private static SAMLAuthenticationConfig config;
 
-
-        public static void LogToEventLog(string methodName, string message)
+        private void LogAdminAlertToEventLog(string methodName, string message)
         {
-            DotNetNuke.Services.Log.EventLog.ExceptionLogController objEventLog = new DotNetNuke.Services.Log.EventLog.ExceptionLogController();
-            DotNetNuke.Services.Log.EventLog.LogInfo objEventLogInfo = new DotNetNuke.Services.Log.EventLog.LogInfo();
-            objEventLogInfo.BypassBuffering = true;
-            objEventLogInfo.LogTypeKey = "ADMIN_ALERT";
-            objEventLogInfo.LogPortalID = staticPortalSettings.PortalId;
-
-            LogDetailInfo logInfo1 = new LogDetailInfo("methodName: ", methodName);
-            LogDetailInfo logInfo2 = new LogDetailInfo("Message: ", message);
-            objEventLogInfo.LogProperties.Add(logInfo1);
-            objEventLogInfo.LogProperties.Add(logInfo2);
-            objEventLog.AddLog(objEventLogInfo);
-
-            //eventLog.AddLog("DNN.Authentication.SAML." + methodName + " : " + DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss:fff"), message, staticPortalSettings, -1, EventLogController.EventLogType.ADMIN_ALERT);
-
+            LogInfo objEventLogInfo = new LogInfo()
+            {
+                BypassBuffering = true,
+                LogTypeKey = "ADMIN_ALERT",
+                LogPortalID = PortalSettings.PortalId
+            };
+            objEventLogInfo.LogProperties.Add(new LogDetailInfo("methodName: ", methodName));
+            objEventLogInfo.LogProperties.Add(new LogDetailInfo("Message: ", message));
+            ExceptionLogController.Instance.AddLog(objEventLogInfo);
         }
 
         public override bool Enabled
@@ -61,296 +56,262 @@ namespace DotNetNuke.Authentication.SAML
 
 		protected override void OnLoad(EventArgs e)
         {
-            if (Request.QueryString["legacy"] != null)
+            base.OnLoad(e);
+            if (Request.QueryString["legacy"] != null || Request.IsAuthenticated)
             {
-
+                return;
             }
-            else
+
+            string correlationId = Guid.NewGuid().ToString();
+            try
             {
-                base.OnLoad(e);
-                staticPortalSettings = PortalSettings;
                 string redirectTo = "~/";
-                try
+
+                if (Request.HttpMethod == "POST")
                 {
+                    this.AuthenticationType = "SAML";
+                    SAMLAuthenticationConfig config = SAMLAuthenticationConfig.GetConfig(PortalId);                    
+                    //specify the certificate that your SAML provider has given to you
+                    string samlCertificate = config.TheirCert;
 
+                    Saml.Response samlResponse = new Saml.Response(samlCertificate);
+                    Logger.Debug($"CorrelationId={correlationId}. Request.Form[SAMLResponse]: {Request.Form["SAMLResponse"]}");
+                    samlResponse.LoadXmlFromBase64(Request.Form["SAMLResponse"]); 
+                    Logger.Debug($"CorrelationId={correlationId}. SAML response: {samlResponse.Xml}");
 
-                    config = SAMLAuthenticationConfig.GetConfig(PortalId);
-                    if (Request.HttpMethod == "POST" && !Request.IsAuthenticated)
+                    if (!samlResponse.IsValid())
                     {
-                        //specify the certificate that your SAML provider has given to you
-                        string samlCertificate = config.TheirCert;
+                        throw new ApplicationException("SAML response is not valid");
+                    }
 
-                        Saml.Response samlResponse = new Saml.Response(samlCertificate);
-                        LogToEventLog("Request:", Request.Form["SAMLResponse"].ToString());
-                        samlResponse.LoadXmlFromBase64(Request.Form["SAMLResponse"]); //SAML providers usually POST the data into this var
-                                                                                      //String xmlExample = "";
-                                                                                      //samlResponse.LoadXml(xmlExample);
+                    Logger.Trace($"CorrelationId={correlationId}. SAML response is valid. User logged in!");
 
+                    // Process claims
+                    string username = "", email = "", firstname = "", lastname = "", displayname = "";
+                    var rolesList = new List<string>();
+                    var requiredRolesList = new List<string>();
+                    try
+                    {
+                        username = samlResponse.GetNameID();
+                        email = samlResponse.GetUserProperty(config.usrEmail, "email");
+                        firstname = samlResponse.GetUserProperty(config.usrFirstName, "firstName");
+                        lastname = samlResponse.GetUserProperty(config.usrLastName, "lastName");
+                        displayname = samlResponse.GetUserProperty(config.usrDisplayName, "displayName");
 
-                        LogToEventLog("saml response:", samlResponse.Xml.ToString());
-                        if (samlResponse.IsValid())
+                        // Ensure first and last name and displayname are not empty. This usually happens with Entra ID guest users
+                        if (string.IsNullOrEmpty(displayname))
                         {
-                            LogToEventLog("DNN.Authentication.SAML.OnLoad(tae)", string.Format("samlResponse is:  {0}", samlResponse.Xml.ToString()));
-                            //WOOHOO!!! user is logged in
-                            //YAY!
+                            displayname = $"{firstname} {lastname}".Trim();
+                        }
+                        if (string.IsNullOrEmpty(firstname))
+                        {
+                            firstname = StaticHelper.GetFirstName(displayname);
+                        }
+                        if (string.IsNullOrEmpty(lastname))
+                        {
+                            lastname = StaticHelper.GetLastName(displayname);
+                        }
 
-                            //Obtain optional items
-                            string username = "", email = "", firstname = "", lastname = "", displayname = "";
-                            var rolesList = new List<string>();
-                            var requiredRolesList = new List<string>();
-                            try
+                        StaticHelper.EnsureNotEmpty(nameof(username), username, Logger, correlationId);
+                        StaticHelper.EnsureNotEmpty(nameof(email), email, Logger, correlationId);
+                        StaticHelper.EnsureNotEmpty(nameof(firstname), firstname, Logger, correlationId);
+                        StaticHelper.EnsureNotEmpty(nameof(lastname), lastname, Logger, correlationId);
+                        StaticHelper.EnsureNotEmpty(nameof(displayname), displayname, Logger, correlationId);
+
+                        var roles = samlResponse.GetUserProperty(config.RoleAttribute);
+                        if (!string.IsNullOrWhiteSpace(roles))
+                        {
+                            rolesList = roles.Split(new []{','}, StringSplitOptions.RemoveEmptyEntries).ToList();
+                        }
+
+                        var requiredRoles = samlResponse.GetUserProperty(config.RequiredRoles);
+                        if (!string.IsNullOrWhiteSpace(requiredRoles))
+                        {
+                            requiredRolesList = requiredRoles.Split(new[] {','},
+                                StringSplitOptions.RemoveEmptyEntries).ToList();
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {                            
+                        throw new ApplicationException("Error processing SAML claims", ex);
+                    }
+
+                    // Now we have the user's info, let's create or update the user
+                    UserInfo userInfo = UserController.GetUserByName(PortalSettings.PortalId, username);                            
+                    if (userInfo == null) 
+                    {                   
+                        Logger.Debug($"CorrelationId={correlationId}. User does not exist, let's create it");
+                        try
+                        {
+                            userInfo = new UserInfo()
                             {
-                                username = samlResponse.GetNameID();
-
-                                ////Fix for Beck
-                                //string[] parts = username.Split('@');
-                                //if (parts.Length > 2)
-                                //{
-                                //    username = username.Substring(16);
-                                //}
-
-                                if (username == null)
+                                FirstName = firstname,
+                                LastName = lastname,
+                                DisplayName = displayname,
+                                Email = email,
+                                Username = username,
+                                PortalID = PortalSettings.PortalId,
+                                IsSuperUser = false,
+                                Membership = new UserMembership()
                                 {
-                                    LogToEventLog("DNN.Authentication.SAML.OnLoad(tae)", "USER IS NULL");
+                                    Password = UserController.GeneratePassword()
                                 }
-                                else
-                                {
-                                    if (username == "")
-                                    {
-                                        LogToEventLog("DNN.Authentication.SAML.OnLoad(tae)", "USER IS EMPTY");
-                                    }
-
-                                }
-
-
-                                LogToEventLog("DNN.Authentication.SAML.OnLoad(tae)", string.Format("Username is: {0} ", username));
-
-                                email = samlResponse.GetUserProperty(config.usrEmail);
-                                if (email == null)
-                                {
-                                    email = samlResponse.GetUserProperty("email");
-                                }
-                                firstname = samlResponse.GetUserProperty(config.usrFirstName);
-                                if (firstname == null)
-                                {
-                                    firstname = samlResponse.GetUserProperty("firstName");
-                                }
-                                lastname = samlResponse.GetUserProperty(config.usrLastName);
-                                if (lastname == null)
-                                {
-                                    lastname = samlResponse.GetUserProperty("lastName");
-                                }
-                                displayname = samlResponse.GetUserProperty(config.usrDisplayName);
-                                if (displayname == null)
-                                {
-                                    displayname = samlResponse.GetUserProperty("displayName");
-                                }
-
-                                var roles = samlResponse.GetUserProperty(config.RoleAttribute);
-                                if (!string.IsNullOrWhiteSpace(roles))
-                                {
-                                    rolesList = roles.Split(new []{','}, StringSplitOptions.RemoveEmptyEntries).ToList();
-                                }
-
-                                var requiredRoles = samlResponse.GetUserProperty(config.RequiredRoles);
-                                if (!string.IsNullOrWhiteSpace(requiredRoles))
-                                {
-                                    requiredRolesList = requiredRoles.Split(new[] {','},
-                                        StringSplitOptions.RemoveEmptyEntries).ToList();
-                                }
-
-                            }
-                            catch (Exception ex)
-                            {
-                                //insert error handling code
-                                //no, really, please do
-                                LogToEventLog("DNN.Authentication.SAML.OnLoad(tae)", string.Format("Exception:......{0}", ex.InnerException.Message));
-                            }
-
-
-                            UserInfo userInfo = UserController.GetUserByName(PortalSettings.PortalId, username);
-                            
-                            if (userInfo == null)
-                            {
-                               //user does not exists, it needs to be created.
-                                userInfo = new UserInfo();
-                                try
-                                {
-                                    if (username != null && email != null && firstname != null && lastname != null)
-                                    {
-                                        if (displayname == null)
-                                        {
-                                            userInfo.DisplayName = firstname + " " + lastname;
-                                        }
-                                        else
-                                        {
-                                            userInfo.DisplayName = displayname;
-                                        }
-
-                                        if(username.Trim() != "" && firstname.Trim() != "" && lastname.Trim() != "" && email.Trim() != "")
-                                        {
-                                            userInfo.FirstName = firstname;
-                                            userInfo.LastName = lastname;
-                                            userInfo.Username = username;
-                                            userInfo.Email = email;
-                                            userInfo.PortalID = PortalSettings.PortalId;
-                                            userInfo.IsSuperUser = false;
-                                            userInfo.Membership.Password = UserController.GeneratePassword();
+                            };
                                            
-                                            var usrCreateStatus = new UserCreateStatus();
+                            UserCreateStatus usrCreateStatus = UserController.CreateUser(ref userInfo);
+                            if (usrCreateStatus == UserCreateStatus.Success)
+                            {
+                                UserInfo usrInfo = UserController.GetUserByName(PortalSettings.PortalId, username);
+                                SetProfileProperties(config, samlResponse, usrInfo);
+                                UpdateUserMembership(usrInfo);
 
-                                            usrCreateStatus = UserController.CreateUser(ref userInfo);
-
-                                            if (usrCreateStatus == UserCreateStatus.Success)
-                                            {
-                                                UserInfo usrInfo = UserController.GetUserByName(PortalSettings.PortalId, username);
-                                                SetProfileProperties(samlResponse, usrInfo);
-
-                                                //Add roles if needed, since a new user no need to remove roles or process that condition
-                                                if (rolesList.Any())
-                                                    AssignRolesFromList(usrInfo, rolesList);
-                                            }
-                                            else
-                                            {
-                                                LogToEventLog("DNN.Authentication.SAML.OnLoad(tae)", "Error creating new user..." + usrCreateStatus.ToString());
-                                            }
-                                        }
-                                                                                
-                                    }                                                               
-                                }
-                                catch (Exception ex)
-                                {
-                                    LogToEventLog("DNN.Authentication.SAML.OnLoad(tae)", "Error creating new user...exception:  " + ex.InnerException.Message);
-                                }
-                                
+                                //Add roles if needed, since a new user no need to remove roles or process that condition
+                                if (rolesList.Any())
+                                    AssignRolesFromList(usrInfo, rolesList);
                             }
                             else
                             {
-                                //User already exists
+                                throw new ApplicationException($"Error creating new user: {usrCreateStatus}");
+                            }                                                                                
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new ApplicationException("Error creating new user", ex);
+                        }                                
+                    }
+                    else // User exists, let's update it
+                    {
+                        Logger.Debug($"CorrelationId={correlationId}. User exists, let's update it");
+                        try
+                        {                             
+                            userInfo.DisplayName = displayname;
+                            userInfo.FirstName = firstname;
+                            userInfo.LastName = lastname;
+                            userInfo.Email = email;
+                            UserController.UpdateUser(PortalSettings.PortalId, userInfo);
 
-                                //Wen unlock it if necessary
-                                if (userInfo.Membership.LockedOut)
-                                {
-                                    UserController.UnLockUser(userInfo);
-                                }
-                              
-                                LogToEventLog("DNN.Authentication.SAML.OnLoad(post !auth)", String.Format("FoundUser userInfo.Username: {0}", userInfo.Username));
+                            SetProfileProperties(config, samlResponse, userInfo);
+                            UpdateUserMembership(userInfo);
 
-                                userInfo.Membership.Approved = true;
-                                try
-                                {
-                                    if (username != null && email != null && firstname != null && lastname != null)
-                                    {
-                                        if (username.Trim() != "" && firstname.Trim() != "" && lastname.Trim() != "" && email.Trim() != "")
-                                        {
-                                            //We update the user's info
-                                            userInfo.DisplayName = displayname;
-                                            userInfo.FirstName = firstname;
-                                            userInfo.LastName = lastname;
-                                            userInfo.Email = email;
-
-                                            UserController.UpdateUser(PortalSettings.PortalId, userInfo);
-
-                                            //We update the user's properties
-                                            SetProfileProperties(samlResponse, userInfo);
-
-                                            //Ensure roles if neeeded
-                                            if (rolesList.Any())
-                                            {
-                                                AssignRolesFromList(userInfo, rolesList);
-                                            }
-
-                                            //If we have a required role list, remove any of those items that were not in the SAML attribute
-                                            if (requiredRolesList.Any())
-                                            {
-                                                var toRemove = requiredRolesList.Where(req => !rolesList.Contains(req))
-                                                    .ToList();
-                                                RemoveRolesFromList(userInfo, toRemove);
-                                            }
-                                        }
-                                    }
-                                        
-                                     
-                                }
-                                catch (Exception ex)
-                                {
-                                    LogToEventLog("DNN.Authentication.SAML.OnLoad(tae)", "Error updating existing user...exception:  " + ex.InnerException.Message);
-                                }
-                               
-                            }
-                            
-
-                            UserValidStatus validStatus = UserController.ValidateUser(userInfo, PortalId, true);
-                            UserLoginStatus loginStatus = validStatus == UserValidStatus.VALID ? UserLoginStatus.LOGIN_SUCCESS : UserLoginStatus.LOGIN_FAILURE;
-                            if (loginStatus == UserLoginStatus.LOGIN_SUCCESS)
+                            // If we have a role list, assign the roles
+                            if (rolesList.Any())
                             {
-                                SetLoginDate(username);     
-                                //Raise UserAuthenticated Event
-                                var eventArgs = new UserAuthenticatedEventArgs(userInfo, userInfo.Email, loginStatus, config.DNNAuthName) //"DNN" is default, "SAML" is this one.  How did it get named SAML????
-                                {
-                                    Authenticated = true,
-                                    Message = "User authorized",
-                                    RememberMe = false
-                                };
-
-                                UserController.UserLogin(PortalId, userInfo, PortalSettings.PortalName, Request.UserHostAddress, false);
-
-                                if (config.RedirectURL != Null.NullString)
-                                {
-                                    if(config.RedirectURL.Trim() != String.Empty && config.RedirectURL.Trim() != "")
-                                    {
-                                        Response.Redirect(config.RedirectURL, false);
-                                    }
-                                }
-
-                                //OnUserAuthenticated(eventArgs);                                                            
+                                AssignRolesFromList(userInfo, rolesList);
                             }
+
+                            // If we have a required role list, remove the roles that are not in the list
+                            if (requiredRolesList.Any())
+                            {
+                                var toRemove = requiredRolesList.Where(req => !rolesList.Contains(req)).ToList();
+                                RemoveRolesFromList(userInfo, toRemove);
+                            }        
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new ApplicationException("Error updating the user", ex);
+
+                        }                               
+                    }
+                            
+                    // Validate user
+                    UserValidStatus validStatus = UserController.ValidateUser(userInfo, PortalId, true);
+                    UserLoginStatus loginStatus = validStatus == UserValidStatus.VALID ? UserLoginStatus.LOGIN_SUCCESS : UserLoginStatus.LOGIN_FAILURE;
+                    if (loginStatus == UserLoginStatus.LOGIN_SUCCESS)
+                    {
+
+                        // Obtain the current client IP
+                        var userRequestIpAddressController = UserRequestIPAddressController.Instance;
+                        var ipAddress = userRequestIpAddressController.GetUserRequestIPAddress(new HttpRequestWrapper(this.Request));
+
+                        // check if the user is an admin/host and validate their IP
+                        if (Host.EnableIPChecking)
+                        {
+                            bool isAdminUser = userInfo.IsSuperUser || userInfo.IsInRole(this.PortalSettings.AdministratorRoleName);
+                            if (isAdminUser)
+                            {
+                                var clientIp = ipAddress;
+                                if (IPFilterController.Instance.IsIPBanned(clientIp))
+                                {
+                                    PortalSecurity.Instance.SignOut();
+                                    this.AddModuleMessage("IPAddressBanned", ModuleMessage.ModuleMessageType.RedError, true);
+                                    return;
+                                }
+                            }
+                        }
+
+                        // Set the Page Culture(Language) based on the Users Preferred Locale
+                        if ((userInfo.Profile != null) && (userInfo.Profile.PreferredLocale != null) && this.LocaleEnabled(userInfo.Profile.PreferredLocale))
+                        {
+                            Localization.SetLanguage(userInfo.Profile.PreferredLocale);
                         }
                         else
                         {
-                            LogToEventLog("DNN.Authentication.SAML.OnLoad(tae)", "saml not valid");
+                            Localization.SetLanguage(this.PortalSettings.DefaultLanguage);
                         }
-                    }
-                    else if (Request.IsAuthenticated)
-                    {
-                        //Do Nothing if the request is authenticated
-                    }
-                    else
-                    {
-                        XmlDocument request = GenerateSAMLRequest();
-                        //X509Certificate2 cert = StaticHelper.GetCert(config.OurCertFriendlyName);
-                        //request = StaticHelper.SignSAMLRequest(request, cert);
-                        String convertedRequestXML = StaticHelper.Base64CompressUrlEncode(request);
-                        redirectTo = config.IdPURL + (config.IdPURL.Contains("?") ? "&" : "?") + "SAMLRequest=" + convertedRequestXML;
-                        if (Request.QueryString.Count > 0)
-                            redirectTo += "&RelayState=" + HttpUtility.UrlEncode(Request.Url.Query.Replace("?", "&"));
 
-                        Response.Redirect(Page.ResolveUrl(redirectTo), false);
+                        // Set the Authentication Type used
+                        AuthenticationController.SetAuthenticationType(this.AuthenticationType);
 
-                    }
+                        // Complete Login
+                        UserController.UserLogin(this.PortalId, userInfo, this.PortalSettings.PortalName, ipAddress, false);
 
+
+                        // redirect browser
+                        if (!string.IsNullOrEmpty(config.RedirectURL))
+                        {
+                            this.RedirectURL = config.RedirectURL;
+                        }
+                        var redirectUrl = this.RedirectURL;
+
+                        // Clear the cookie
+                        HttpContext.Current.Response.Cookies.Set(new HttpCookie("returnurl", string.Empty)
+                        {
+                            Expires = DateTime.Now.AddDays(-1),
+                            Path = !string.IsNullOrEmpty(Globals.ApplicationPath) ? Globals.ApplicationPath : "/",
+                        });
+
+                        this.Response.Redirect(redirectUrl, false);                                                        
+                    } 
                 }
-                catch (System.Threading.ThreadAbortException tae)
+                else
                 {
-                    LogToEventLog("DNN.Authentication.SAML.OnLoad(tae)", string.Format("Exception is {0}", tae.Message));
-                    //Response.Redirect(Page.ResolveUrl(redirectTo), false); 
-                }
-                catch (Exception ex)
-                {
-                    LogToEventLog("DNN.Authentication.SAML.OnLoad()", string.Format("Exception  {0}", ex.Message));
-                    //redirectTo = "~/";
-                }
+                    Logger.Trace($"CorrelationId={correlationId}. Redirecting to SAML provider");
+                    SAMLAuthenticationConfig config = SAMLAuthenticationConfig.GetConfig(PortalId);
+                    XmlDocument request = GenerateSAMLRequest(config, correlationId);
 
-                //Response.Redirect(Page.ResolveUrl(redirectTo), false);
-
+                    if (!string.IsNullOrEmpty(config.OurCert) && !string.IsNullOrEmpty(config.OurCertKey))
+                    {
+                        Logger.Trace($"CorrelationId={correlationId}. Signing SAML request with our certificate");
+                        X509Certificate2 cert = StaticHelper.LoadCertificateFromPEM(config.OurCert, config.OurCertKey);
+                        Logger.Trace($"CorrelationId={correlationId}. Certificate loaded successfully, Serial Number:{cert.SerialNumber}");
+                        request = StaticHelper.SignSAMLRequest(request, cert);
+                    }
+                    String convertedRequestXML = StaticHelper.Base64CompressUrlEncode(request);
+                    Logger.Debug($"CorrelationId={correlationId}. Redirecting to SAML provider. SAMLRequest={convertedRequestXML}");
+                    redirectTo = config.IdPURL + (config.IdPURL.Contains("?") ? "&" : "?") + "SAMLRequest=" + convertedRequestXML;
+                    if (Request.QueryString.Count > 0)
+                        redirectTo += "&RelayState=" + HttpUtility.UrlEncode(Request.Url.Query.Replace("?", "&"));
+                    Response.Redirect(Page.ResolveUrl(redirectTo), false);
+                }
             }
-
+            catch (Exception ex)
+            {
+                Logger.Error($"CorrelationId={correlationId}", ex);
+                LogAdminAlertToEventLog("DotNetNuke.Authentication.SAML.OnLoad()", $"CorrelationId={correlationId}; Exception: {ex.Message}; Inner: {ex.InnerException?.Message}");
+                UI.Skins.Skin.AddModuleMessage(this, $"Error processing SAML claims. CorrelationId={correlationId}", ModuleMessage.ModuleMessageType.RedError);
+            }
         }
 
-        private XmlDocument GenerateSAMLRequest()
+        private bool LocaleEnabled(string locale)
+        {
+            return LocaleController.Instance.GetLocales(this.PortalSettings.PortalId).ContainsKey(locale);
+        }
+
+        private XmlDocument GenerateSAMLRequest(SAMLAuthenticationConfig config, string correlationId)
         {
             DateTime now = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
-            string authnRequestID = "ONELOGIN_" + Guid.NewGuid().ToString().Replace("-", "");
+            string authnRequestID = "DNN_SAML_" + correlationId.Replace("-", "");
 
             string requestXML = @"<samlp:AuthnRequest " +
                 @" ID=""" + authnRequestID + @"""" +
@@ -370,64 +331,7 @@ namespace DotNetNuke.Authentication.SAML
             return xml;
         }
 
-        private XmlDocument GenerateSAMLRequestAux()
-        {
-            DateTime now = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
-            string authnRequestID = "ONELOGIN_" + Guid.NewGuid().ToString().Replace("-", "");
-
-            string requestXML = @"<samlp:AuthnRequest " +
-                @" ID=""" + authnRequestID + @"""" +
-                @" IssueInstant = """ + now.ToString("O") + @"""" +
-                @" Version = ""2.0"" " +
-                @" Destination = """ + config.IdPURL + @"""" +
-                @" ProtocolBinding = ""urn:oasis:names:tc:SAML:2.0:bindings:HTTP-REDIRECT"" " +
-                @" AssertionConsumerServiceURL = """ + config.ConsumerServURL + @"""" +
-                @" xmlns:samlp = ""urn:oasis:names:tc:SAML:2.0:protocol"" " +
-                @" xmlns:saml = ""urn:oasis:names:tc:SAML:2.0:assertion"">" +
-                @" <saml:Issuer>" + config.OurIssuerEntityID + @"</saml:Issuer>" +
-                @" <samlp:NameIDPolicy " +
-                @" Format=""urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"" " +
-                @" AllowCreate = ""true"" />" +
-                @" <samlp:RequestedAuthnContext " +
-                @" Comparison = ""exact"">" +
-                @" <saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>" +
-                @" </samlp:RequestedAuthnContext>" +
-                @" </samlp:AuthnRequest>";
-
-
-            LogToEventLog("DNN.Authentication.SAML.Request", "Request is:  " + requestXML);
-            XmlDocument xml = new XmlDocument();
-            xml.LoadXml(requestXML);
-            return xml;
-        }
-
-        private void PrintOutKeyValues(string name, System.Collections.Specialized.NameValueCollection coll)
-        {
-            if (coll == null)
-                LogToEventLog("DNN.Authentication.SAML.PrintOutKeyValues()", string.Format("{0} is null", name));
-            else
-            {
-                LogToEventLog("DNN.Authentication.SAML.PrintOutKeyValues()", string.Format("{0} has {1} elements", name, coll.Count));
-
-                foreach (string key in coll.AllKeys)
-                    LogToEventLog("DNN.Authentication.SAML.PrintOutKeyValues(post !auth)", string.Format("{0} [{1}] = [{2}]", name, key, coll[key]));
-            }
-
-        }
-
-        private void SetLoginDate(string username)
-        {
-            StringBuilder mysqlstring = new StringBuilder();
-
-            mysqlstring.Append("UPDATE {databaseOwner}aspnet_Membership SET LastLoginDate = @0 where UserId in (select UserId from {databaseOwner}aspnet_Users where UserName = @1)");
-
-            using (DotNetNuke.Data.IDataContext db = DataContext.Instance())
-            {
-                db.Execute(System.Data.CommandType.Text, mysqlstring.ToString(), DateTime.Now.ToString(), username);
-            }
-        }
-
-        private void SetProfileProperties(Saml.Response response, UserInfo uInfo)
+        private void SetProfileProperties(SAMLAuthenticationConfig config, Saml.Response response, UserInfo uInfo)
         {
             try
             {
@@ -449,11 +353,62 @@ namespace DotNetNuke.Authentication.SAML
 
                 ProfileController.UpdateUserProfile(uInfo);
             }
-            catch (Exception exc)
+            catch (Exception ex)
             {
-                LogToEventLog("DNN.Authentication.SAML.SetProfileProperties", string.Format("Exception  {0}", exc.Message));
+                Logger.Error($"Error updating profile properties for user {uInfo.Username}", ex);
+            }
+        }
+
+        private void MarkUserAsSaml(UserInfo user)
+        {
+            var def = ProfileController.GetPropertyDefinitionByName(user.PortalID, "IdentitySource");
+            if (def == null)
+            {
+                var dataTypes = (new ListController()).GetListEntryInfoDictionary("DataType");
+                var definition = new ProfilePropertyDefinition(user.PortalID)
+                {
+                    DataType = dataTypes["DataType:Text"].EntryID,
+                    DefaultValue = "SAML",
+                    DefaultVisibility = UserVisibilityMode.AdminOnly,
+                    PortalId = user.PortalID,
+                    ModuleDefId = Null.NullInteger,
+                    PropertyCategory = "Security",
+                    PropertyName = "IdentitySource",
+                    Required = false,
+                    Visible = false,
+                    ViewOrder = -1
+                };
+                ProfileController.AddPropertyDefinition(definition);
             }
 
+            user.Profile.SetProfileProperty("IdentitySource", "SAML");
+            Security.Profile.ProfileProvider.Instance().UpdateUserProfile(user);
+        }
+
+        private void UpdateUserMembership(UserInfo userInfo)
+        {
+            // Unlock user if necessary
+            if (userInfo.Membership.LockedOut)
+            {
+                UserController.UnLockUser(userInfo);
+            }
+
+            // Reset user password with a new one to avoid password expiration errors on DNN for SAML users
+            MembershipUser aspnetUser = Membership.GetUser(userInfo.Username);
+            aspnetUser.ResetPassword();
+
+            // Last login date not being updated by DNN on OAuth login, so we have to do it manually
+            aspnetUser = Membership.GetUser(userInfo.Username);
+            aspnetUser.LastLoginDate = DateTime.Now;
+            Membership.UpdateUser(aspnetUser);
+
+            // Updates the user in DNN
+            userInfo.Membership.LastLoginDate = aspnetUser.LastLoginDate;
+            userInfo.Membership.UpdatePassword = false;
+            userInfo.Membership.Approved = true; // Delegate approval on Auth Provider
+            UserController.UpdateUser(userInfo.PortalID, userInfo);
+
+            MarkUserAsSaml(userInfo);
         }
 
         #region Role Helpers

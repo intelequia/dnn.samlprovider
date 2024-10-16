@@ -33,6 +33,24 @@ namespace DotNetNuke.Authentication.SAML
         protected global::System.Web.UI.WebControls.CheckBox chkEnabled;
 
         /// <summary>
+        /// lblOurIssuerEntityId control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblOurIssuerEntityId;
+
+        /// <summary>
+        /// txtOurIssuerEntityId control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtOurIssuerEntityId;
+
+        /// <summary>
         /// lblIdpUrl control.
         /// </summary>
         /// <remarks>
@@ -87,42 +105,6 @@ namespace DotNetNuke.Authentication.SAML
         protected global::System.Web.UI.WebControls.TextBox txtConsumerServUrl;
 
         /// <summary>
-        /// lblOurIssuerEntityId control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblOurIssuerEntityId;
-
-        /// <summary>
-        /// txtOurIssuerEntityId control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtOurIssuerEntityId;
-
-        /// <summary>
-        /// lblDNNAuthName control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblDNNAuthName;
-
-        /// <summary>
-        /// txtDNNAuthName control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtDNNAuthName;
-
-        /// <summary>
         /// lblTheirCert control.
         /// </summary>
         /// <remarks>
@@ -139,6 +121,42 @@ namespace DotNetNuke.Authentication.SAML
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.TextBox txtTheirCert;
+
+        /// <summary>
+        /// lblOurCert control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblOurCert;
+
+        /// <summary>
+        /// txtOurCert control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtOurCert;
+
+        /// <summary>
+        /// lblOurCertKey control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblOurCertKey;
+
+        /// <summary>
+        /// txtOurCertKey control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtOurCertKey;
 
         /// <summary>
         /// lblRedirectURL control.

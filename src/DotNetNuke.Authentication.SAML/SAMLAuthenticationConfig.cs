@@ -10,7 +10,8 @@ namespace DotNetNuke.Authentication.SAML
     [Serializable]
     public class SAMLAuthenticationConfig : AuthenticationConfigBase
     {
-        internal const string PREFIX = "DNN.Authentication.SAML_";
+        internal const string AuthTypeName = "SAML";
+        internal const string PREFIX = "SAML_";
         internal const string usrPREFIX = "usr_";
         protected SAMLAuthenticationConfig(int portalID) : base(portalID)
         {
@@ -36,44 +37,47 @@ namespace DotNetNuke.Authentication.SAML
             if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + "ConsumerServURL", out setting))
                 ConsumerServURL = setting;
 
-            DNNAuthName = "SAML";
-            setting = Null.NullString;
-            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + "DNNAuthName", out setting))
-                DNNAuthName = setting;
-
             setting = Null.NullString;
             if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + "TheirCert", out setting))
                 TheirCert = setting;
 
             setting = Null.NullString;
-            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(usrPREFIX + "FirstName", out setting))
+            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + usrPREFIX + "FirstName", out setting))
                 usrFirstName = setting;
 
             setting = Null.NullString;
-            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(usrPREFIX + "LastName", out setting))
+            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + usrPREFIX + "LastName", out setting))
                 usrLastName = setting;
 
             setting = Null.NullString;
-            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(usrPREFIX + "DisplayName", out setting))
+            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + usrPREFIX + "DisplayName", out setting))
                 usrDisplayName = setting;
 
             setting = Null.NullString;
-            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(usrPREFIX + "Email", out setting))
+            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + usrPREFIX + "Email", out setting))
                 usrEmail = setting;
 
             setting = Null.NullString;
             if (PortalController.Instance.GetPortalSettings(portalID)
-                .TryGetValue(usrPREFIX + "RoleAttribute", out setting))
+                .TryGetValue(PREFIX + usrPREFIX + "RoleAttribute", out setting))
                 RoleAttribute = setting;
 
             setting = Null.NullString;
             if (PortalController.Instance.GetPortalSettings(portalID)
-                .TryGetValue(usrPREFIX + "RequiredRoles", out setting))
+                .TryGetValue(PREFIX + usrPREFIX + "RequiredRoles", out setting))
                 RequiredRoles = setting;
 
             setting = Null.NullString;
             if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + "RedirectURL", out setting))
                 RedirectURL = setting;
+
+            setting = Null.NullString;
+            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + "OurCert", out setting))
+                OurCert = setting;
+
+            setting = Null.NullString;
+            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + "OurCertKey", out setting))
+                OurCertKey = setting;
         }
 
         public bool Enabled { get; set; }
@@ -81,8 +85,9 @@ namespace DotNetNuke.Authentication.SAML
         public string IdPLogoutURL { get; set; }
         public string OurIssuerEntityID { get; set; }
         public string ConsumerServURL { get; set; }
-        public string DNNAuthName { get; set; }
         public string TheirCert { get; set; }
+        public string OurCert { get; set; }
+        public string OurCertKey { get; set; }
         public string RedirectURL { get; set; }
 
         public string usrFirstName { get; set; }
@@ -96,8 +101,7 @@ namespace DotNetNuke.Authentication.SAML
 
         public static SAMLAuthenticationConfig GetConfig(int portalId)
         {
-            var config = new SAMLAuthenticationConfig(portalId);
-            return config;
+            return new SAMLAuthenticationConfig(portalId);
         }
 
         public static void UpdateConfig(SAMLAuthenticationConfig config)
@@ -107,30 +111,27 @@ namespace DotNetNuke.Authentication.SAML
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "IdPLogoutURL", config.IdPLogoutURL);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "OurIssuerEntityID", config.OurIssuerEntityID);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "ConsumerServURL", config.ConsumerServURL);
-            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "DNNAuthName", config.DNNAuthName);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "TheirCert", config.TheirCert);
+            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "OurCert", config.OurCert);
+            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "OurCertKey", config.OurCertKey);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "RedirectURL", config.RedirectURL);
-
-            //ClearConfig(config.PortalID);
-            PortalController.UpdatePortalSetting(config.PortalID, usrPREFIX + "FirstName", config.usrFirstName);
-            PortalController.UpdatePortalSetting(config.PortalID, usrPREFIX + "LastName", config.usrLastName);
-            PortalController.UpdatePortalSetting(config.PortalID, usrPREFIX + "DisplayName", config.usrDisplayName);
-            PortalController.UpdatePortalSetting(config.PortalID, usrPREFIX + "Email", config.usrEmail);
-            PortalController.UpdatePortalSetting(config.PortalID, usrPREFIX + "RoleAttribute", config.RoleAttribute);
-            PortalController.UpdatePortalSetting(config.PortalID, usrPREFIX + "RequiredRoles", config.RequiredRoles);
+            
+            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "FirstName", config.usrFirstName);
+            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "LastName", config.usrLastName);
+            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "DisplayName", config.usrDisplayName);
+            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "Email", config.usrEmail);
+            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "RoleAttribute", config.RoleAttribute);
+            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "RequiredRoles", config.RequiredRoles);
         }
 
         public string getProfilePropertySAMLName(string DNNpropertyName)
         {
             var setting = Null.NullString;
-            if (PortalController.Instance.GetPortalSettings(PortalID).TryGetValue(usrPREFIX + DNNpropertyName + ":", out setting))
+            if (PortalController.Instance.GetPortalSettings(PortalID).TryGetValue(PREFIX + usrPREFIX + DNNpropertyName + ":", out setting))
             {
                 return setting;
             }
-            else
-            {
-                return "";
-            }
+            return "";
         }
 
 
