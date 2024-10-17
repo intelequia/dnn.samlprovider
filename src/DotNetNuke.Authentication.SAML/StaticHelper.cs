@@ -13,6 +13,7 @@ using System.Security.Cryptography.Xml;
 using System.Text;
 using System.Web;
 using System.Xml;
+using System.Xml.Xsl;
 
 namespace DotNetNuke.Authentication.SAML
 {
@@ -49,6 +50,31 @@ namespace DotNetNuke.Authentication.SAML
             sb.Replace("\r", string.Empty);
             return sb.ToString();
         }
+
+        internal static AsymmetricKeyParameter GetPrivateKeyFromPem(string key)
+        {
+            using (var reader = new StringReader(key))
+            {
+                var pemReader = new PemReader(reader);
+                var keyPair = pemReader.ReadObject() as AsymmetricCipherKeyPair;
+                return keyPair.Private;
+            }
+        }
+
+        internal static string SignSAMLRequest(string samlRequest, AsymmetricKeyParameter privateKey)
+        {
+            var encoding = new UTF8Encoding();
+            var data = encoding.GetBytes(samlRequest);
+
+            ISigner signer = SignerUtilities.GetSigner("SHA256withRSA");
+            signer.Init(true, privateKey);
+            signer.BlockUpdate(data, 0, data.Length);
+            var signedData = signer.GenerateSignature();
+
+            var base64SignedData = Convert.ToBase64String(signedData);
+            return $"<ds:SignatureValue>{base64SignedData}</ds:SignatureValue>{samlRequest}";
+        }
+
         public static X509Certificate2 GetCert(string friendlyName)
         {
             //http://stackoverflow.com/questions/23394654/signing-a-xml-document-with-x509-certificate
@@ -101,10 +127,11 @@ namespace DotNetNuke.Authentication.SAML
             SignedXml signedXml = new SignedXml(xmlDoc);
             signedXml.SigningKey = myCert.GetRSAPrivateKey();
             Reference reference = new Reference();
-            reference.Uri = "";
-            XmlDsigEnvelopedSignatureTransform env = new XmlDsigEnvelopedSignatureTransform();
-            reference.AddTransform(env);
+            reference.Uri = "#" + xmlDoc.FirstChild.Attributes["ID"].Value;
+            reference.AddTransform(new XmlDsigEnvelopedSignatureTransform());
+            reference.AddTransform(new XmlDsigExcC14NTransform());
             signedXml.AddReference(reference);
+            signedXml.SignedInfo.CanonicalizationMethod = SignedXml.XmlDsigExcC14NTransformUrl;
             //add KeyInfo clause -  https://msdn.microsoft.com/en-us/library/ms148731(v=vs.110).aspx ---------
             KeyInfo keyInfo = new KeyInfo();
             keyInfo.AddClause(new KeyInfoX509Data(myCert));
@@ -144,26 +171,22 @@ namespace DotNetNuke.Authentication.SAML
             return sig;
         }
 
-        public static byte[] SignString2(string text, X509Certificate2 cert)
+        public static byte[] SignString2(string text, string pemKey)
         {
-            if (!cert.HasPrivateKey)
-            {
-                throw new SignatureException("Certificate does not have a private key");
-            }
             //http://stackoverflow.com/questions/3240222/get-private-key-from-bouncycastle-x509-certificate-c-sharp
-            AsymmetricKeyParameter bouncyCastlePrivateKey = TransformRSAPrivateKey(cert.GetRSAPrivateKey());
+            AsymmetricKeyParameter bouncyCastlePrivateKey = TransformRSAPrivateKey(pemKey);
 
             //http://stackoverflow.com/questions/8830510/c-sharp-sign-data-with-rsa-using-bouncycastle
-            ISigner sig = SignerUtilities.GetSigner("SHA1withRSA");
+            ISigner sig = SignerUtilities.GetSigner("SHA256withRSA");
             sig.Init(true, bouncyCastlePrivateKey);
             var data = Encoding.UTF8.GetBytes(text);
             sig.BlockUpdate(data, 0, data.Length);
             return sig.GenerateSignature();
         }
 
-        public static AsymmetricKeyParameter TransformRSAPrivateKey(AsymmetricAlgorithm privateKey)
+        public static AsymmetricKeyParameter TransformRSAPrivateKey(string pemKey)
         {
-            RSACryptoServiceProvider prov = privateKey as RSACryptoServiceProvider;
+            RSACryptoServiceProvider prov = RSAKeys.ImportPrivateKey(pemKey); // privateKey as RSACryptoServiceProvider;
             RSAParameters parameters = prov.ExportParameters(true);
 
             return new RsaPrivateCrtKeyParameters(

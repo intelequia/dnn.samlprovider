@@ -39,10 +39,9 @@ namespace DotNetNuke.Authentication.SAML
                     Logger.Trace($"CorrelationId={correlationId}. Signing SAML request with our certificate");
                     X509Certificate2 cert = StaticHelper.LoadCertificateFromPEM(config.OurCert, config.OurCertKey);
                     Logger.Trace($"CorrelationId={correlationId}. Certificate loaded successfully, Serial Number:{cert.SerialNumber}");
-
                     request = StaticHelper.SignSAMLRequest2(request, cert);
-                    convertedSigAlg = System.Web.HttpUtility.UrlEncode("http://www.w3.org/2000/09/xmldsig#rsa-sha1");
-                    byte[] signature = StaticHelper.SignString2(string.Format("SAMLRequest={0}&RelayState={1}&SigAlg={2}", convertedRequestXML, "NA", convertedSigAlg), cert);
+                    convertedSigAlg = System.Web.HttpUtility.UrlEncode("http://www.w3.org/2001/04/xmldsig-more#rsa-sha256");
+                    byte[] signature = StaticHelper.SignString2(string.Format("SAMLRequest={0}&RelayState={1}&SigAlg={2}", convertedRequestXML, "NA", convertedSigAlg), config.OurCertKey);
                     convertedSignature = System.Web.HttpUtility.UrlEncode(Convert.ToBase64String(signature));
                 }
                 string redirectTo = config.IdPLogoutURL +

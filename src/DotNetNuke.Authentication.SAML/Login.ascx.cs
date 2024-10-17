@@ -26,6 +26,8 @@ using System.Web;
 using System.Web.Security;
 using System.Xml;
 using System.Security.Cryptography.X509Certificates;
+using System.IO;
+using System.Security.Cryptography;
 
 namespace DotNetNuke.Authentication.SAML
 {
@@ -280,19 +282,43 @@ namespace DotNetNuke.Authentication.SAML
                     SAMLAuthenticationConfig config = SAMLAuthenticationConfig.GetConfig(PortalId);
                     XmlDocument request = GenerateSAMLRequest(config, correlationId);
 
+                    string convertedSigAlg = "";
+                    string convertedSignature = "";
+                    string relayState = "NA";
+                    if (Request.QueryString.Count > 0)
+                    {
+                        relayState = HttpUtility.UrlEncode(Request.Url.Query.Replace("?", "&"));
+                    }
+                    String convertedRequestXML = StaticHelper.Base64CompressUrlEncode(request);
                     if (!string.IsNullOrEmpty(config.OurCert) && !string.IsNullOrEmpty(config.OurCertKey))
                     {
+                        // Signed requests are done via POST
                         Logger.Trace($"CorrelationId={correlationId}. Signing SAML request with our certificate");
                         X509Certificate2 cert = StaticHelper.LoadCertificateFromPEM(config.OurCert, config.OurCertKey);
                         Logger.Trace($"CorrelationId={correlationId}. Certificate loaded successfully, Serial Number:{cert.SerialNumber}");
-                        request = StaticHelper.SignSAMLRequest(request, cert);
+                        request = StaticHelper.SignSAMLRequest2(request, cert);
+                        convertedRequestXML = Convert.ToBase64String(Encoding.UTF8.GetBytes(request.OuterXml)); // StaticHelper.Base64CompressUrlEncode(request);
+                        convertedSigAlg = HttpUtility.UrlEncode("http://www.w3.org/2001/04/xmldsig-more#rsa-sha256");
+                        byte[] signature = StaticHelper.SignString2(string.Format("RelayState={0}&SigAlg={1}", relayState, convertedSigAlg), config.OurCertKey);
+                        convertedSignature = HttpUtility.UrlEncode(Convert.ToBase64String(signature));
+
+                        Logger.Debug($"CorrelationId={correlationId}. Posting to SAML provider. SAMLRequest={convertedRequestXML}");
+                        redirectTo = config.IdPURL + (config.IdPURL.Contains("?") ? "&" : "?") + "RelayState=" + relayState + "&SigAlg=" + convertedSigAlg  +"&Signature=" + convertedSignature;                        
+                        File.WriteAllText(Path.Combine(Path.GetTempPath(), correlationId), convertedRequestXML);
+                        Response.Redirect($"/api/saml/sso/process?sid={correlationId}&state={relayState}&sigalg={convertedSigAlg}&signature={convertedSignature}", false);
+
+                        /*Response.Write("<html><head><script type='text/javascript'>window.onload = function() {document.forms[0].submit();}</script></head><body><form method='post' action='" + redirectTo + "'>" +
+                            "<input type='hidden' name='SAMLRequest' value='" + convertedRequestXML + "' />" +
+                            "<input type='submit' value='Submit' /></form></body></html>");*/
+                    }          
+                    else // Not signed requests are done via GET
+                    {
+                        Logger.Debug($"CorrelationId={correlationId}. Redirecting to SAML provider. SAMLRequest={convertedRequestXML}");
+                        redirectTo = config.IdPURL + (config.IdPURL.Contains("?") ? "&" : "?") + "SAMLRequest=" + convertedRequestXML;
+                        if (Request.QueryString.Count > 0)
+                            redirectTo += $"&RelayState={relayState}";
+                        Response.Redirect(Page.ResolveUrl(redirectTo), false);
                     }
-                    String convertedRequestXML = StaticHelper.Base64CompressUrlEncode(request);
-                    Logger.Debug($"CorrelationId={correlationId}. Redirecting to SAML provider. SAMLRequest={convertedRequestXML}");
-                    redirectTo = config.IdPURL + (config.IdPURL.Contains("?") ? "&" : "?") + "SAMLRequest=" + convertedRequestXML;
-                    if (Request.QueryString.Count > 0)
-                        redirectTo += "&RelayState=" + HttpUtility.UrlEncode(Request.Url.Query.Replace("?", "&"));
-                    Response.Redirect(Page.ResolveUrl(redirectTo), false);
                 }
             }
             catch (Exception ex)
