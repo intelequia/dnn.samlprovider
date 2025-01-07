@@ -123,12 +123,14 @@ namespace DotNetNuke.Authentication.SAML
                         var roles = samlResponse.GetUserProperty(config.RoleAttribute);
                         if (!string.IsNullOrWhiteSpace(roles))
                         {
+                            roles = roles.Replace(';', ',');
                             rolesList = roles.Split(new []{','}, StringSplitOptions.RemoveEmptyEntries).ToList();
                         }
 
                         var requiredRoles = samlResponse.GetUserProperty(config.RequiredRoles);
                         if (!string.IsNullOrWhiteSpace(requiredRoles))
                         {
+                            requiredRoles.Replace(';', ',');
                             requiredRolesList = requiredRoles.Split(new[] {','},
                                 StringSplitOptions.RemoveEmptyEntries).ToList();
                         }
