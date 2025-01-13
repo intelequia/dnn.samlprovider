@@ -32,7 +32,7 @@ namespace DotNetNuke.Authentication.SAML
                 config.usrFirstName = txtFirstName.Text;
                 config.usrLastName = txtLastName.Text;
                 config.RoleAttribute = txtRoleAttributeName.Text;
-                config.RequiredRoles = txtRequiredRolesTextbox.Text;
+                config.IgnoredRoles = txtIgnoredRolesTextbox.Text;
                 config.RedirectURL = txtRedirectURL.Text;
 
                 SAMLAuthenticationConfig.UpdateConfig(config);
@@ -78,7 +78,7 @@ namespace DotNetNuke.Authentication.SAML
                     txtOurCertKey.Text = config.OurCertKey;
                     chkEnabled.Checked = config.Enabled;
                     txtRoleAttributeName.Text = config.RoleAttribute;
-                    txtRequiredRolesTextbox.Text = config.RequiredRoles;
+                    txtIgnoredRolesTextbox.Text = config.IgnoredRoles;
                     txtRedirectURL.Text = config.RedirectURL;
                 }
                 BindRepeater();

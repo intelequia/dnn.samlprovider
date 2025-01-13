@@ -294,21 +294,21 @@ namespace DotNetNuke.Authentication.SAML
         protected global::System.Web.UI.WebControls.TextBox txtRoleAttributeName;
 
         /// <summary>
-        /// lblRequiredRoles control.
+        /// lblIgnordRoles control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblRequiredRoles;
+        protected global::System.Web.UI.WebControls.Label lblIgnordRoles;
 
         /// <summary>
-        /// txtRequiredRolesTextbox control.
+        /// txtIgnoredRolesTextbox control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtRequiredRolesTextbox;
+        protected global::System.Web.UI.WebControls.TextBox txtIgnoredRolesTextbox;
     }
 }

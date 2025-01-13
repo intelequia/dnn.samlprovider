@@ -91,7 +91,7 @@ namespace DotNetNuke.Authentication.SAML
                     // Process claims
                     string username = "", email = "", firstname = "", lastname = "", displayname = "";
                     var rolesList = new List<string>();
-                    var requiredRolesList = new List<string>();
+                    var ignoredRolesList = new List<string>();
                     try
                     {
                         username = samlResponse.GetUserProperty(config.usrUserName, "username");
@@ -131,14 +131,15 @@ namespace DotNetNuke.Authentication.SAML
                             rolesList = roles.Split(new []{','}, StringSplitOptions.RemoveEmptyEntries).ToList();
                         }
 
-                        var requiredRoles = samlResponse.GetUserProperty(config.RequiredRoles);
-                        if (!string.IsNullOrWhiteSpace(requiredRoles))
+                        var ignoredRoles = config.IgnoredRoles;
+                        if (!string.IsNullOrWhiteSpace(ignoredRoles))
                         {
-                            requiredRoles.Replace(';', ',');
-                            requiredRolesList = requiredRoles.Split(new[] {','},
+                            ignoredRoles.Replace(';', ',');
+                            ignoredRolesList = ignoredRoles.Split(new[] {','},
                                 StringSplitOptions.RemoveEmptyEntries).ToList();
                         }
-
+                        // Remove ignored roles from rolesList
+                        rolesList = rolesList.Except(ignoredRolesList).ToList();
                     }
                     catch (Exception ex)
                     {                            
@@ -210,13 +211,6 @@ namespace DotNetNuke.Authentication.SAML
                             // Loop user roles and remove the roles that are not in the list
                             var rolesToRemove = userInfo.Roles.Where(r => !rolesList.Contains(r)).ToList();
                             RemoveRolesFromList(userInfo, rolesToRemove);
-
-                            // If we have a required role list, remove the roles that are not in the list
-                            if (requiredRolesList.Any())
-                            {
-                                var toRemove = requiredRolesList.Where(req => !rolesList.Contains(req)).ToList();
-                                RemoveRolesFromList(userInfo, toRemove);
-                            }
                         }
                         catch (Exception ex)
                         {

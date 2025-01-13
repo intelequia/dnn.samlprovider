@@ -68,8 +68,8 @@ namespace DotNetNuke.Authentication.SAML
 
             setting = Null.NullString;
             if (PortalController.Instance.GetPortalSettings(portalID)
-                .TryGetValue(PREFIX + usrPREFIX + "RequiredRoles", out setting))
-                RequiredRoles = setting;
+                .TryGetValue(PREFIX + usrPREFIX + "IgnoredRoles", out setting))
+                IgnoredRoles = setting;
 
             setting = Null.NullString;
             if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + "RedirectURL", out setting))
@@ -101,7 +101,7 @@ namespace DotNetNuke.Authentication.SAML
         public string usrEmail { get; set; }
 
         public string RoleAttribute { get; set; }
-        public string RequiredRoles { get; set; }
+        public string IgnoredRoles { get; set; }
 
 
         public static SAMLAuthenticationConfig GetConfig(int portalId)
@@ -127,7 +127,7 @@ namespace DotNetNuke.Authentication.SAML
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "DisplayName", config.usrDisplayName);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "Email", config.usrEmail);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "RoleAttribute", config.RoleAttribute);
-            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "RequiredRoles", config.RequiredRoles);
+            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "IgnoredRoles", config.IgnoredRoles);
         }
 
         public string getProfilePropertySAMLName(string DNNpropertyName)

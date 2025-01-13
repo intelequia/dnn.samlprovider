@@ -99,19 +99,18 @@
 <h3 class="samlHeading">DNN Role Mappings</h3>
 <p class="samlParagraph">
     Using this feature you may provide an incoming SAML attribute that will contain a comma separated listing of DNN Roles that should be added to the user.  
-    Additionally you may optionally specify a listing of roles that MUST come as part of the SAML Assertion, if they are not found the role would be removed.
+    Additionally you may optionally specify a comma separated listing of roles to be ignored, so if they come as part, will be ignored (not added to the user) and removed if they exist.
 </p>
 
-<p class="samlParagraph">Example: If you set "Required Roles" listing to be member,paidmember and a user comes across with only member, they would be added to the member role, and the paidmember
-    role if already existing on their account would be removed.  Any additional roles would be added, if the role exists within DNN.
+<p class="samlParagraph">Example: If you set "Ignored Roles" listing to be "paidmember" and a user comes across with "member,paidmamber", the "paidmember" role will not be added to the local user.
 </p>
 <div class="dnnFormItem">
     <asp:Label runat="server" class="samlLabel" id="lblRoleAttributeName" text="Role Listing Attribute" />
     <asp:TextBox runat="server" id="txtRoleAttributeName" class="samlTextbox"></asp:TextBox>
 </div>
 <div class="dnnFormItem">
-    <asp:Label runat="server"  class="samlLabel" id="lblRequiredRoles" text="Required Roles" />
-    <asp:TextBox runat="server" id="txtRequiredRolesTextbox" class="samlTextbox"></asp:TextBox>
+    <asp:Label runat="server"  class="samlLabel" id="lblIgnordRoles" text="Ignored Roles" />
+    <asp:TextBox runat="server" id="txtIgnoredRolesTextbox" class="samlTextbox"></asp:TextBox>
 </div>
 
 
