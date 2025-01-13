@@ -207,13 +207,16 @@ namespace DotNetNuke.Authentication.SAML
                             {
                                 AssignRolesFromList(userInfo, rolesList);
                             }
+                            // Loop user roles and remove the roles that are not in the list
+                            var rolesToRemove = userInfo.Roles.Where(r => !rolesList.Contains(r)).ToList();
+                            RemoveRolesFromList(userInfo, rolesToRemove);
 
                             // If we have a required role list, remove the roles that are not in the list
                             if (requiredRolesList.Any())
                             {
                                 var toRemove = requiredRolesList.Where(req => !rolesList.Contains(req)).ToList();
                                 RemoveRolesFromList(userInfo, toRemove);
-                            }        
+                            }
                         }
                         catch (Exception ex)
                         {
