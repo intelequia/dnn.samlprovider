@@ -44,8 +44,9 @@ namespace DotNetNuke.Authentication.SAML
                     byte[] signature = StaticHelper.SignString2(string.Format("SAMLRequest={0}&RelayState={1}&SigAlg={2}", convertedRequestXML, "NA", convertedSigAlg), config.OurCertKey);
                     convertedSignature = System.Web.HttpUtility.UrlEncode(Convert.ToBase64String(signature));
                 }
-                string redirectTo = config.IdPLogoutURL +
-                    "?SAMLRequest=" + convertedRequestXML +
+                string redirectTo = config.IdPLogoutURL;
+                redirectTo += !config.IdPLogoutURL.Contains("?") ? "?" : "&";
+                redirectTo += "SAMLRequest=" + convertedRequestXML +
                     "&RelayState=NA";
                 if (!string.IsNullOrEmpty(convertedSigAlg))
                 {
