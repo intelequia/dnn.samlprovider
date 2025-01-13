@@ -94,7 +94,11 @@ namespace DotNetNuke.Authentication.SAML
                     var requiredRolesList = new List<string>();
                     try
                     {
-                        username = samlResponse.GetNameID();
+                        username = samlResponse.GetUserProperty(config.usrUserName, "username");
+                        if (string.IsNullOrEmpty(username))
+                        {
+                            username = samlResponse.GetNameID();
+                        }                        
                         email = samlResponse.GetUserProperty(config.usrEmail, "email");
                         firstname = samlResponse.GetUserProperty(config.usrFirstName, "firstName");
                         lastname = samlResponse.GetUserProperty(config.usrLastName, "lastName");

@@ -68,6 +68,10 @@
 <h3 class="samlHeading">User Profile Mappings</h3>
 <p class="samlParagraph">To map incoming values to their respective DNN Profile values provide the attribute name that should be used to lookup the value in the incoming SAML assertion.</p>
 <div class="dnnFormItem">
+    <asp:Label class="samlLabel" ID="lblUserName" runat="server" Text="Username" />
+    <asp:TextBox class="samlTextbox" runat="server" ID="txtUsername"></asp:TextBox>
+</div>
+<div class="dnnFormItem">
     <asp:Label class="samlLabel" ID="lblFirstName" runat="server" Text="First Name" />
     <asp:TextBox class="samlTextbox" runat="server" ID="txtFirstName"></asp:TextBox>
 </div>

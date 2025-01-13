@@ -26,6 +26,7 @@ namespace DotNetNuke.Authentication.SAML
                 config.TheirCert = txtTheirCert.Text;
                 config.OurCert = txtOurCert.Text;
                 config.OurCertKey = txtOurCertKey.Text;
+                config.usrUserName = txtUsername.Text;
                 config.usrDisplayName = txtDisplayName.Text;
                 config.usrEmail = txtEmail.Text;
                 config.usrFirstName = txtFirstName.Text;
@@ -66,6 +67,7 @@ namespace DotNetNuke.Authentication.SAML
                     txtIdpUrl.Text = config.IdPURL;
                     txtIdpLogoutUrl.Text = config.IdPLogoutURL;
                     txtConsumerServUrl.Text = config.ConsumerServURL;
+                    txtUsername.Text = config.usrUserName;
                     txtDisplayName.Text = config.usrDisplayName;
                     txtEmail.Text = config.usrEmail;
                     txtFirstName.Text = config.usrFirstName;
@@ -98,7 +100,7 @@ namespace DotNetNuke.Authentication.SAML
             var props = ProfileController.GetPropertyDefinitionsByPortal(PortalId);
             foreach (ProfilePropertyDefinition def in props)
             {
-                if (def.PropertyName == "FirstName" || def.PropertyName == "LastName" || def.PropertyName == "IdentitySource")
+                if (def.PropertyName == "UserName" || def.PropertyName == "FirstName" || def.PropertyName == "LastName" || def.PropertyName == "IdentitySource")
                 {
                     continue;
                 }

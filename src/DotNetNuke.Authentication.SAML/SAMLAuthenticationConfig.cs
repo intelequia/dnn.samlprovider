@@ -42,6 +42,10 @@ namespace DotNetNuke.Authentication.SAML
                 TheirCert = setting;
 
             setting = Null.NullString;
+            if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + usrPREFIX + "Username", out setting))
+                usrUserName = setting;
+
+            setting = Null.NullString;
             if (PortalController.Instance.GetPortalSettings(portalID).TryGetValue(PREFIX + usrPREFIX + "FirstName", out setting))
                 usrFirstName = setting;
 
@@ -93,6 +97,7 @@ namespace DotNetNuke.Authentication.SAML
         public string usrFirstName { get; set; }
         public string usrLastName { get; set; }
         public string usrDisplayName { get; set; }
+        public string usrUserName { get; set; }
         public string usrEmail { get; set; }
 
         public string RoleAttribute { get; set; }
@@ -115,7 +120,8 @@ namespace DotNetNuke.Authentication.SAML
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "OurCert", config.OurCert);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "OurCertKey", config.OurCertKey);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + "RedirectURL", config.RedirectURL);
-            
+
+            PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "Username", config.usrUserName);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "FirstName", config.usrFirstName);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "LastName", config.usrLastName);
             PortalController.UpdatePortalSetting(config.PortalID, PREFIX + usrPREFIX + "DisplayName", config.usrDisplayName);
