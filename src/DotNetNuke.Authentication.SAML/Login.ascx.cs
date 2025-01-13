@@ -209,7 +209,8 @@ namespace DotNetNuke.Authentication.SAML
                                 AssignRolesFromList(userInfo, rolesList);
                             }
                             // Loop user roles and remove the roles that are not in the list
-                            var rolesToRemove = userInfo.Roles.Where(r => !rolesList.Contains(r)).ToList();
+                            var currentUserRoles = RoleController.Instance.GetUserRoles(userInfo, true).Select(x => x.RoleName); // To include expired roles
+                            var rolesToRemove = currentUserRoles.Where(r => !rolesList.Contains(r)).ToList();
                             RemoveRolesFromList(userInfo, rolesToRemove);
                         }
                         catch (Exception ex)
@@ -499,12 +500,13 @@ namespace DotNetNuke.Authentication.SAML
         {
             if (oRolesToRemove != null && oRolesToRemove.Count > 0)
             {
+                var currentUserRoles = RoleController.Instance.GetUserRoles(user, true); // To include expired roles
                 foreach (var oCurrent in oRolesToRemove)
                 {
                     //Only remove if the user is in it
-                    if (user.IsInRole(oCurrent))
+                    var oCurrentRole = currentUserRoles.FirstOrDefault(x => x.RoleName == oCurrent);
+                    if (oCurrent != null)
                     {
-                        var oCurrentRole = RoleController.Instance.GetRoleByName(PortalId, oCurrent);
                         RoleController.DeleteUserRole(user, oCurrentRole, PortalSettings, false);
                     }
                 }
