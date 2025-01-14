@@ -211,6 +211,8 @@ namespace DotNetNuke.Authentication.SAML
                             // Loop user roles and remove the roles that are not in the list
                             var currentUserRoles = RoleController.Instance.GetUserRoles(userInfo, true).Select(x => x.RoleName); // To include expired roles
                             var rolesToRemove = currentUserRoles.Where(r => !rolesList.Contains(r)).ToList();
+                            // remove ignored roles
+                            rolesToRemove = rolesToRemove.Except(ignoredRolesList).ToList();
                             RemoveRolesFromList(userInfo, rolesToRemove);
                         }
                         catch (Exception ex)
