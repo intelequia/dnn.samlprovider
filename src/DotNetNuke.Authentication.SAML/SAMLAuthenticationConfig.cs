@@ -133,7 +133,7 @@ namespace DotNetNuke.Authentication.SAML
         public string getProfilePropertySAMLName(string DNNpropertyName)
         {
             var setting = Null.NullString;
-            if (PortalController.Instance.GetPortalSettings(PortalID).TryGetValue(PREFIX + usrPREFIX + DNNpropertyName + ":", out setting))
+            if (PortalController.Instance.GetPortalSettings(PortalID).TryGetValue(PREFIX + usrPREFIX + DNNpropertyName, out setting))
             {
                 return setting;
             }
