@@ -34,7 +34,12 @@ namespace DotNetNuke.Authentication.SAML.Controllers
                 }
                 string samlRequest = File.ReadAllText(filename);
                 SAMLAuthenticationConfig config = SAMLAuthenticationConfig.GetConfig(PortalSettings.PortalId);
-                string redirectTo = config.IdPURL + (config.IdPURL.Contains("?") ? "&" : "?") + "RelayState=" + state + "&SigAlg=" + sigalg + "&Signature=" + signature;
+                string extraParams = "RelayState=" + HttpUtility.UrlEncode(state)+ "&SigAlg=" + HttpUtility.UrlEncode(sigalg) + "&Signature=" + HttpUtility.UrlEncode(signature);
+                string redirectTo = config.IdPURL + (config.IdPURL.Contains("?") 
+                    ? (config.IdPURL.ToLowerInvariant().Contains("returnurl=") 
+                        ? HttpUtility.UrlEncode("&" + extraParams)
+                        : "&" + extraParams)
+                    : "?" + extraParams);
                 string content = "<html><head><script type='text/javascript'>window.onload = function() {document.forms[0].submit();}</script></head><body><form method='post' action='" + redirectTo + "'>" +
                 "<input type='hidden' name='SAMLRequest' value='" + samlRequest + "' />" +
                 "</form></body></html>";

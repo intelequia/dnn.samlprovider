@@ -291,9 +291,9 @@ namespace DotNetNuke.Authentication.SAML
                     string convertedSigAlg = "";
                     string convertedSignature = "";
                     string relayState = "NA";
-                    if (Request.QueryString.Count > 0)
+                    if (!string.IsNullOrEmpty(Request.QueryString["returnurl"]))
                     {
-                        relayState = HttpUtility.UrlEncode(Request.Url.Query.Replace("?", "&"));
+                        relayState = HttpUtility.UrlEncode("returnurl=" + HttpUtility.UrlDecode(Request.QueryString["returnurl"]));
                     }
                     String convertedRequestXML = StaticHelper.Base64CompressUrlEncode(request);
                     if (!string.IsNullOrEmpty(config.OurCert) && !string.IsNullOrEmpty(config.OurCertKey))
@@ -309,7 +309,7 @@ namespace DotNetNuke.Authentication.SAML
                         convertedSignature = HttpUtility.UrlEncode(Convert.ToBase64String(signature));
 
                         Logger.Debug($"CorrelationId={correlationId}. Posting to SAML provider. SAMLRequest={convertedRequestXML}");
-                        redirectTo = config.IdPURL + (config.IdPURL.Contains("?") ? "&" : "?") + "RelayState=" + relayState + "&SigAlg=" + convertedSigAlg  +"&Signature=" + convertedSignature;                        
+                        //redirectTo = config.IdPURL + (config.IdPURL.Contains("?") ? "&" : "?") + "RelayState=" + relayState + "&SigAlg=" + convertedSigAlg +"&Signature=" + convertedSignature;                        
                         File.WriteAllText(Path.Combine(Path.GetTempPath(), correlationId), convertedRequestXML);
                         Response.Redirect($"/api/saml/sso/process?sid={correlationId}&state={relayState}&sigalg={convertedSigAlg}&signature={convertedSignature}", false);
 
