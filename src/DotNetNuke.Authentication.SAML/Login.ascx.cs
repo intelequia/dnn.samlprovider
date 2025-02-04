@@ -380,7 +380,7 @@ namespace DotNetNuke.Authentication.SAML
 
                 foreach (KeyValuePair<string, string> kvp in properties)
                 {
-                    uInfo.Profile.SetProfileProperty(kvp.Key, kvp.Value);
+                    uInfo.Profile.SetProfileProperty(kvp.Key, string.IsNullOrEmpty(kvp.Value) ? "" : kvp.Value);
                 }
 
                 ProfileController.UpdateUserProfile(uInfo);
