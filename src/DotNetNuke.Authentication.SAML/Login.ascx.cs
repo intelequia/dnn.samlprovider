@@ -271,6 +271,16 @@ namespace DotNetNuke.Authentication.SAML
                             this.RedirectURL = config.RedirectURL;
                         }
                         var redirectUrl = this.RedirectURL;
+                        if (!string.IsNullOrEmpty(Request.QueryString["RelayState"]))
+                        {
+                            var relayState = Request.QueryString["RelayState"];
+                            var relayStateList = relayState.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+                            var relayStateRet = relayStateList.FirstOrDefault(x => x.ToLowerInvariant().StartsWith("returnurl="));
+                            if (relayStateRet != null)
+                            {
+                                redirectUrl = HttpUtility.UrlDecode(relayStateRet.Substring(relayStateRet.IndexOf("returnurl=") + 10));
+                            }
+                        }
 
                         // Clear the cookie
                         HttpContext.Current.Response.Cookies.Set(new HttpCookie("returnurl", string.Empty)
