@@ -271,9 +271,9 @@ namespace DotNetNuke.Authentication.SAML
                             this.RedirectURL = config.RedirectURL;
                         }
                         var redirectUrl = this.RedirectURL;
-                        if (!string.IsNullOrEmpty(Request.QueryString["RelayState"]))
+                        if (!string.IsNullOrEmpty(Request["RelayState"]))
                         {
-                            var relayState = Request.QueryString["RelayState"];
+                            var relayState = Request["RelayState"];
                             var relayStateList = relayState.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
                             var relayStateRet = relayStateList.FirstOrDefault(x => x.ToLowerInvariant().StartsWith("returnurl="));
                             if (relayStateRet != null)
