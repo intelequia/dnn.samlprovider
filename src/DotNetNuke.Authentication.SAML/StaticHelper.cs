@@ -1,4 +1,5 @@
 ﻿using DotNetNuke.Instrumentation;
+using DotNetNuke.Services.Cache;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Math;
@@ -21,6 +22,12 @@ namespace DotNetNuke.Authentication.SAML
     {
         public static X509Certificate2 LoadCertificateFromPEM(string certPem, string keyPem)
         {
+            string certCacheKey = "SAML_Cert_" + certPem.GetHashCode().ToString();
+            X509Certificate2 certificate = CachingProvider.Instance().GetItem(certCacheKey) as X509Certificate2;
+            if (certificate != null)
+            {
+                return certificate;
+            }
             string sanitizedCert = SanitizePem(certPem, "CERTIFICATE");
             string sanitizedKey = keyPem; // SanitizePem(keyPem, "PRIVATE KEY");
 
@@ -35,9 +42,9 @@ namespace DotNetNuke.Authentication.SAML
             }
 
             RSA rsaKey = DotNetUtilities.ToRSA((RsaPrivateCrtKeyParameters)keyParameter);
-            var certificate = new X509Certificate2(certBytes);
+            certificate = new X509Certificate2(certBytes);
             certificate = certificate.CopyWithPrivateKey(rsaKey);
-
+            CachingProvider.Instance().Insert(certCacheKey, certificate);
             return certificate;
         }
 

@@ -9,6 +9,10 @@
 <div class="License">
 	<h3>About the DNN SAML Authentication provider</h3>
 	<p class="Owner">
+		<b>Version 1.0.1</b>
+	</p>
+	<p>Fix error "There is not enough space on the disk" when login in <br /><br /></p>	
+	<p class="Owner">
 		<b>Version 1.0.0</b>
 	</p>
 	<p>Initial realease.<br /><br /></p>	
