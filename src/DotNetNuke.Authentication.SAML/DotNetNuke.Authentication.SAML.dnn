@@ -1,6 +1,6 @@
 ﻿<dotnetnuke type="Package" version="5.0">
   <packages>
-    <package name="SAMLProvider" type="Auth_System" version="01.00.01">
+    <package name="SAMLProvider" type="Auth_System" version="01.00.02">
       <friendlyName>DNN SAML Provider</friendlyName>
       <description>SAML authentication provider for DNN Platform</description>
 		<iconFile>~/DesktopModules/AuthenticationServices/SAML/images/saml-logo-32.png</iconFile>
