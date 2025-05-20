@@ -275,10 +275,10 @@ namespace DotNetNuke.Authentication.SAML
                         {
                             var relayState = Request["RelayState"];
                             var relayStateList = relayState.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
-                            var relayStateRet = relayStateList.FirstOrDefault(x => x.ToLowerInvariant().StartsWith("returnurl="));
+                            var relayStateRet = relayStateList.FirstOrDefault(x => x.ToLowerInvariant().StartsWith("rurl="));
                             if (relayStateRet != null)
                             {
-                                redirectUrl = HttpUtility.UrlDecode(relayStateRet.Substring(relayStateRet.IndexOf("returnurl=") + 10));
+                                redirectUrl = HttpUtility.UrlDecode(relayStateRet.Substring(relayStateRet.IndexOf("rurl=") + 5));
                             }
                         }
 
@@ -303,7 +303,7 @@ namespace DotNetNuke.Authentication.SAML
                     string relayState = "NA";
                     if (!string.IsNullOrEmpty(Request.QueryString["returnurl"]))
                     {
-                        relayState = HttpUtility.UrlEncode("returnurl=" + HttpUtility.UrlDecode(Request.QueryString["returnurl"]));
+                        relayState = HttpUtility.UrlEncode("rurl=" + HttpUtility.UrlDecode(Request.QueryString["returnurl"]));
                     }
                     String convertedRequestXML = StaticHelper.Base64CompressUrlEncode(request);
                     if (!string.IsNullOrEmpty(config.OurCert) && !string.IsNullOrEmpty(config.OurCertKey))
