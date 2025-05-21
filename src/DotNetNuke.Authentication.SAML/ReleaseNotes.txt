@@ -9,7 +9,7 @@
 <div class="License">
 	<h3>About the DNN SAML Authentication provider</h3>
 	<p class="Owner">
-		<b>Version 1.0.2</b>
+		<b>Version 1.0.3</b>
 	</p>
 	<p>Changed relay state encoding to avoid issues with some web application firewalls<br /><br /></p>	
 	<p class="Owner">
